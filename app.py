@@ -12,7 +12,7 @@ st.set_page_config(
     layout="centered",
 )
 
-# ====== 韓国アプリ風の簡単なスタイル ======
+# ====== スタイル ======
 CUSTOM_CSS = """
 <style>
     body {
@@ -61,6 +61,15 @@ CUSTOM_CSS = """
         border-bottom: 1px dashed #d0d7f2;
         margin: 0.4rem 0 0.6rem 0;
     }
+    .notice {
+        font-size: 13px;
+        color: #1f3c88;
+        background: #e8edff;
+        padding: 0.8rem 1rem;
+        border-radius: 12px;
+        margin-top: 1rem;
+        line-height: 1.5;
+    }
     .stButton>button {
         background-color: #1f3c88;
         color: white;
@@ -79,7 +88,7 @@ st.markdown(CUSTOM_CSS, unsafe_allow_html=True)
 
 # ====== タイトル ======
 st.markdown('<div class="app-title">日中韓よみあげくん</div>', unsafe_allow_html=True)
-st.markdown('<div class="app-subtitle">日本語のフレーズから、韓国語・中国語の音声教材をつくるよ 🎧</div>', unsafe_allow_html=True)
+st.markdown('<div class="app-subtitle">日本語のフレーズから、韓国語・中国語・タイ語の音声教材をつくるよ 🎧</div>', unsafe_allow_html=True)
 
 # ====== 入力カード ======
 with st.container():
@@ -103,7 +112,7 @@ with st.container():
     with col2:
         target_lang_label = st.selectbox(
             "翻訳先の言語",
-            ["韓国語", "中国語（簡体）", "中国語（繁体）"],
+            ["韓国語", "中国語（簡体）", "中国語（繁体）", "タイ語"],
         )
 
     col3, col4 = st.columns(2)
@@ -153,10 +162,11 @@ def get_lang_code(label: str) -> str:
         return "zh-CN"
     if label == "中国語（繁体）":
         return "zh-TW"
+    if label == "タイ語":
+        return "th"
     return "ko"
 
 
-# 🔥 翻訳を1行ずつ安全に行う（成功していた頃の方式）
 def safe_translate(text, target_lang, retries=3):
     for _ in range(retries):
         try:
@@ -164,7 +174,7 @@ def safe_translate(text, target_lang, retries=3):
             return result.text
         except Exception:
             continue
-    return None  # 翻訳失敗
+    return None
 
 
 def change_speed(audio: AudioSegment, speed: float) -> AudioSegment:
@@ -195,116 +205,127 @@ with st.container():
     generate = st.button("音声をつくる 🎧")
 
     if generate:
-        if not text.strip():
-            st.error("日本語のテキストを入力してください。")
-        else:
-            lines = [line.strip() for line in text.split("\n") if line.strip()]
-            if not lines:
-                st.error("有効な行がありません。")
+
+        # 🔵 生成中UI（スピナー）
+        with st.spinner("生成中... 少し待ってね ⏳"):
+
+            if not text.strip():
+                st.error("日本語のテキストを入力してください。")
             else:
-                indices = list(range(len(lines)))
-                if mode == "小テストモード（行の順番をランダムに読み上げ）":
-                    random.shuffle(indices)
+                lines = [line.strip() for line in text.split("\n") if line.strip()]
+                if not lines:
+                    st.error("有効な行がありません。")
+                else:
+                    indices = list(range(len(lines)))
+                    if mode == "小テストモード（行の順番をランダムに読み上げ）":
+                        random.shuffle(indices)
 
-                target_lang = get_lang_code(target_lang_label)
+                    target_lang = get_lang_code(target_lang_label)
 
-                # ===== 翻訳（1行ずつ） =====
-                pairs = []
-                for idx in indices:
-                    jp_line = lines[idx]
-                    foreign_line = safe_translate(jp_line, target_lang)
+                    # ===== 翻訳（1行ずつ） =====
+                    pairs = []
+                    for idx in indices:
+                        jp_line = lines[idx]
+                        foreign_line = safe_translate(jp_line, target_lang)
 
-                    if foreign_line is None:
-                        continue  # 翻訳失敗 → スキップ
+                        if foreign_line is None:
+                            continue
 
-                    pairs.append((jp_line, foreign_line))
+                        pairs.append((jp_line, foreign_line))
 
-                if not pairs:
-                    st.error("翻訳に失敗しました。時間をおいて再度お試しください。")
-                    st.markdown('</div>', unsafe_allow_html=True)
-                    st.stop()
+                    if not pairs:
+                        st.error("翻訳に失敗しました。時間をおいて再度お試しください。")
+                        st.stop()
 
-                silence_between = AudioSegment.silent(duration=silence_between_ms)
-                silence_after_pair = AudioSegment.silent(duration=silence_after_pair_ms)
+                    silence_between = AudioSegment.silent(duration=silence_between_ms)
+                    silence_after_pair = AudioSegment.silent(duration=silence_after_pair_ms)
 
-                audio_segments = []
-                used_pairs = []
+                    audio_segments = []
+                    used_pairs = []
 
-                for i, (jp_line, foreign_line) in enumerate(pairs):
-                    jp_mp3 = f"jp_{i}.mp3"
-                    fr_mp3 = f"fr_{i}.mp3"
+                    for i, (jp_line, foreign_line) in enumerate(pairs):
+                        jp_mp3 = f"jp_{i}.mp3"
+                        fr_mp3 = f"fr_{i}.mp3"
 
-                    ok_jp = tts_to_mp3(jp_line, "ja", jp_mp3)
-                    ok_fr = tts_to_mp3(foreign_line, target_lang, fr_mp3)
+                        ok_jp = tts_to_mp3(jp_line, "ja", jp_mp3)
+                        ok_fr = tts_to_mp3(foreign_line, target_lang, fr_mp3)
 
-                    if not (ok_jp and ok_fr):
+                        if not (ok_jp and ok_fr):
+                            for f in [jp_mp3, fr_mp3]:
+                                if os.path.exists(f):
+                                    os.remove(f)
+                            continue
+
+                        try:
+                            jp_audio = AudioSegment.from_mp3(jp_mp3)
+                            fr_audio = AudioSegment.from_mp3(fr_mp3)
+                        except Exception:
+                            for f in [jp_mp3, fr_mp3]:
+                                if os.path.exists(f):
+                                    os.remove(f)
+                            continue
+
+                        jp_audio = change_speed(jp_audio, speed)
+                        fr_audio = change_speed(fr_audio, speed)
+
+                        if order_label == "日本語 → 外国語":
+                            pair_audio = jp_audio + silence_between + fr_audio
+                        else:
+                            pair_audio = fr_audio + silence_between + jp_audio
+
+                        pair_audio = pair_audio + silence_after_pair
+
+                        audio_segments.append(pair_audio)
+                        used_pairs.append((jp_line, foreign_line))
+
                         for f in [jp_mp3, fr_mp3]:
                             if os.path.exists(f):
                                 os.remove(f)
-                        continue
+
+                    if not audio_segments:
+                        st.error("音声を生成できた行がありませんでした。")
+                        st.stop()
+
+                    final_audio = audio_segments[0]
+                    for seg in audio_segments[1:]:
+                        final_audio += seg
+
+                    output_file = "output.mp3"
+                    try:
+                        final_audio.export(output_file, format="mp3")
+                    except Exception:
+                        st.error("音声ファイルの生成に失敗しました。")
+                        st.stop()
+
+                    st.audio(output_file)
+
+                    st.markdown('<div class="small-label">読み上げたペア一覧</div>', unsafe_allow_html=True)
+                    st.write(f"ペア数：{len(used_pairs)}")
+                    for jp_line, foreign_line in used_pairs:
+                        st.markdown(f'<div class="pair-line"><b>日本語：</b> {jp_line}</div>', unsafe_allow_html=True)
+                        st.markdown(f'<div class="pair-line"><b>{target_lang_label}：</b> {foreign_line}</div>', unsafe_allow_html=True)
+                        st.markdown('<div class="pair-separator"></div>', unsafe_allow_html=True)
 
                     try:
-                        jp_audio = AudioSegment.from_mp3(jp_mp3)
-                        fr_audio = AudioSegment.from_mp3(fr_mp3)
-                    except Exception:
-                        for f in [jp_mp3, fr_mp3]:
-                            if os.path.exists(f):
-                                os.remove(f)
-                        continue
-
-                    jp_audio = change_speed(jp_audio, speed)
-                    fr_audio = change_speed(fr_audio, speed)
-
-                    if order_label == "日本語 → 外国語":
-                        pair_audio = jp_audio + silence_between + fr_audio
-                    else:
-                        pair_audio = fr_audio + silence_between + jp_audio
-
-                    pair_audio = pair_audio + silence_after_pair
-
-                    audio_segments.append(pair_audio)
-                    used_pairs.append((jp_line, foreign_line))
-
-                    for f in [jp_mp3, fr_mp3]:
-                        if os.path.exists(f):
-                            os.remove(f)
-
-                if not audio_segments:
-                    st.error("音声を生成できた行がありませんでした。")
-                    st.markdown('</div>', unsafe_allow_html=True)
-                    st.stop()
-
-                final_audio = audio_segments[0]
-                for seg in audio_segments[1:]:
-                    final_audio += seg
-
-                output_file = "output.mp3"
-                try:
-                    final_audio.export(output_file, format="mp3")
-                except Exception:
-                    st.error("音声ファイルの生成に失敗しました。")
-                    st.markdown('</div>', unsafe_allow_html=True)
-                    st.stop()
-
-                st.audio(output_file)
-
-                st.markdown('<div class="small-label">読み上げたペア一覧</div>', unsafe_allow_html=True)
-                st.write(f"ペア数：{len(used_pairs)}")
-                for jp_line, foreign_line in used_pairs:
-                    st.markdown(f'<div class="pair-line"><b>日本語：</b> {jp_line}</div>', unsafe_allow_html=True)
-                    st.markdown(f'<div class="pair-line"><b>{target_lang_label}：</b> {foreign_line}</div>', unsafe_allow_html=True)
-                    st.markdown('<div class="pair-separator"></div>', unsafe_allow_html=True)
-
-                try:
-                    with open(output_file, "rb") as f:
-                        st.download_button(
-                            label="音声ファイルをダウンロード（MP3）",
-                            data=f.read(),
-                            file_name="yomiage.mp3",
-                            mime="audio/mpeg",
-                        )
-                finally:
-                    if os.path.exists(output_file):
-                        os.remove(output_file)
+                        with open(output_file, "rb") as f:
+                            st.download_button(
+                                label="音声ファイルをダウンロード（MP3）",
+                                data=f.read(),
+                                file_name="yomiage.mp3",
+                                mime="audio/mpeg",
+                            )
+                    finally:
+                        if os.path.exists(output_file):
+                            os.remove(output_file)
 
     st.markdown('</div>', unsafe_allow_html=True)
+
+# ====== 注意事項カード ======
+st.markdown("""
+<div class="notice">
+<b>⚠ サイトの注意事項</b><br><br>
+・無料プランなので、同時に複数人が使うと動作が重くなることがあります。<br>
+・一定時間アクセスがないとサーバーがスリープし、再起動に30〜60秒かかります。<br>
+・音声生成には時間がかかる場合があります。<br>
+</div>
+""", unsafe_allow_html=True)
