@@ -7,12 +7,12 @@ import random
 
 # ====== ページ設定 ======
 st.set_page_config(
-    page_title="日中韓よみあげくん",
+    page_title="日中韓タイよみあげくん",
     page_icon="🎧",
     layout="centered",
 )
 
-# ====== スタイル ======
+# ====== 韓国アプリ風の簡単なスタイル ======
 CUSTOM_CSS = """
 <style>
     body {
@@ -87,7 +87,7 @@ CUSTOM_CSS = """
 st.markdown(CUSTOM_CSS, unsafe_allow_html=True)
 
 # ====== タイトル ======
-st.markdown('<div class="app-title">日中韓タイよみあげくん</div>', unsafe_allow_html=True)
+st.markdown('<div class="app-title">日中韓よみあげくん</div>', unsafe_allow_html=True)
 st.markdown('<div class="app-subtitle">日本語のフレーズから、韓国語・中国語・タイ語の音声教材をつくるよ 🎧</div>', unsafe_allow_html=True)
 
 # ====== 入力カード ======
@@ -306,6 +306,7 @@ with st.container():
                         st.markdown(f'<div class="pair-line"><b>{target_lang_label}：</b> {foreign_line}</div>', unsafe_allow_html=True)
                         st.markdown('<div class="pair-separator"></div>', unsafe_allow_html=True)
 
+                    # ===== ダウンロードボタン =====
                     try:
                         with open(output_file, "rb") as f:
                             st.download_button(
@@ -318,6 +319,14 @@ with st.container():
                         if os.path.exists(output_file):
                             os.remove(output_file)
 
+                    # 🎧 電車で聞いてねメッセージ
+                    st.markdown("""
+                    <div class="notice">
+                    🎧 <b>音声ファイルをダウンロードして、電車の中やスキマ時間に聞いてね！</b><br>
+                    オフラインでも使えるから、いつでもどこでも勉強できるよ ✨
+                    </div>
+                    """, unsafe_allow_html=True)
+
     st.markdown('</div>', unsafe_allow_html=True)
 
 # ====== 注意事項カード ======
@@ -327,5 +336,19 @@ st.markdown("""
 ・無料プランなので、同時に複数人が使うと動作が重くなることがあります。<br>
 ・一定時間アクセスがないとサーバーがスリープし、再起動に30〜60秒かかります。<br>
 ・音声生成には時間がかかる場合があります。<br>
+</div>
+""", unsafe_allow_html=True)
+
+# ====== フッター（制作者表示） ======
+st.markdown("""
+<div style="
+    text-align: center;
+    color: #5f6f94;
+    font-size: 13px;
+    margin-top: 2rem;
+    padding-bottom: 1rem;
+">
+💙 <b>Made by MOE</b><br>
+折角なので使ってください ✨
 </div>
 """, unsafe_allow_html=True)
