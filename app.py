@@ -4,7 +4,7 @@ from gtts import gTTS
 from pydub import AudioSegment
 import os
 
-st.title("日韓読み上げくん（Python3.10版）")
+st.title("日韓読み上げくん（Python3.10）")
 st.write("日本語の文章を入力してください（改行で区切られます）")
 
 text = st.text_area("日本語テキスト", height=200)
