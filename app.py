@@ -1,28 +1,19 @@
 import streamlit as st
 from googletrans import Translator
 from gtts import gTTS
-import wave
+from pydub import AudioSegment
 import os
 
-st.title("日韓よみあげくん（WAV版・Streamlit対応）")
+st.title("日韓よみあげくん（Render 完全版）")
 st.write("日本語の文章を入力してください（改行で区切られます）")
 
 text = st.text_area("日本語テキスト", height=200)
 
 translator = Translator()
 
-# WAV を読み込む関数
-def read_wav(path):
-    with wave.open(path, "rb") as wf:
-        params = wf.getparams()
-        frames = wf.readframes(params.nframes)
-    return params, frames
-
-# WAV を書き出す関数
-def write_wav(path, params, frames):
-    with wave.open(path, "wb") as wf:
-        wf.setparams(params)
-        wf.writeframes(frames)
+def generate_audio(text, lang, filename):
+    tts = gTTS(text=text, lang=lang)
+    tts.save(filename)
 
 if st.button("音声生成"):
     if not text.strip():
@@ -33,33 +24,31 @@ if st.button("音声生成"):
         korean_text = result.text
 
         # 一時ファイル
-        jp_wav = "jp.wav"
-        ko_wav = "ko.wav"
-        out_wav = "output.wav"
+        jp_file = "jp_temp.mp3"
+        ko_file = "ko_temp.mp3"
+        out_file = "output.mp3"
 
-        # 日本語音声生成
-        gTTS(text=text, lang="ja").save(jp_wav)
+        # 音声生成
+        generate_audio(text, "ja", jp_file)
+        generate_audio(korean_text, "ko", ko_file)
 
-        # 韓国語音声生成
-        gTTS(text=korean_text, lang="ko").save(ko_wav)
+        # pydub で読み込み
+        jp_audio = AudioSegment.from_mp3(jp_file)
+        ko_audio = AudioSegment.from_mp3(ko_file)
 
-        # WAV 読み込み
-        jp_params, jp_frames = read_wav(jp_wav)
-        ko_params, ko_frames = read_wav(ko_wav)
-
-        # 結合（単純に frames をつなげる）
-        combined_frames = jp_frames + ko_frames
+        # 結合（間に 0.5 秒の無音）
+        combined = jp_audio + AudioSegment.silent(duration=500) + ko_audio
 
         # 出力
-        write_wav(out_wav, jp_params, combined_frames)
+        combined.export(out_file, format="mp3")
 
         # 再生
-        st.audio(out_wav)
+        st.audio(out_file)
 
         # 翻訳結果表示
         st.success("翻訳結果： " + korean_text)
 
         # 一時ファイル削除
-        os.remove(jp_wav)
-        os.remove(ko_wav)
-        os.remove(out_wav)
+        os.remove(jp_file)
+        os.remove(ko_file)
+        os.remove(out_file)
