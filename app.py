@@ -349,6 +349,6 @@ st.markdown("""
     padding-bottom: 1rem;
 ">
 💙 <b>Made by 3409</b><br>
-折角なので使ってください；；
+頑張ったので良ければ他の人にも共有してください；；好評だったら軽量化します
 </div>
 """, unsafe_allow_html=True)
