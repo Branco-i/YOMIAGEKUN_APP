@@ -4,7 +4,7 @@ from gtts import gTTS
 from pydub import AudioSegment
 import os
 
-st.title("日韓よみあげくん（Render 完全版）")
+st.title("日韓よみあげくん（安定版）")
 st.write("日本語の文章を入力してください（改行で区切られます）")
 
 text = st.text_area("日本語テキスト", height=200)
@@ -19,37 +19,49 @@ if st.button("音声生成"):
     if not text.strip():
         st.error("テキストを入力してください")
     else:
+        # 複数行を1つの文章にまとめる
+        jp_text = text.replace("\n", "。")
+
         # 翻訳
-        result = translator.translate(text, src="ja", dest="ko")
-        korean_text = result.text
+        result = translator.translate(jp_text, src="ja", dest="ko")
+        ko_text = result.text
 
         # 一時ファイル
-        jp_file = "jp_temp.mp3"
-        ko_file = "ko_temp.mp3"
-        out_file = "output.mp3"
+        jp_mp3 = "jp.mp3"
+        ko_mp3 = "ko.mp3"
+        jp_wav = "jp.wav"
+        ko_wav = "ko.wav"
+        out_wav = "out.wav"
+        out_mp3 = "output.mp3"
 
         # 音声生成
-        generate_audio(text, "ja", jp_file)
-        generate_audio(korean_text, "ko", ko_file)
+        generate_audio(jp_text, "ja", jp_mp3)
+        generate_audio(ko_text, "ko", ko_mp3)
 
-        # pydub で読み込み
-        jp_audio = AudioSegment.from_mp3(jp_file)
-        ko_audio = AudioSegment.from_mp3(ko_file)
+        # mp3 → wav に変換（無音が確実に入るように）
+        AudioSegment.from_mp3(jp_mp3).export(jp_wav, format="wav")
+        AudioSegment.from_mp3(ko_mp3).export(ko_wav, format="wav")
 
-        # 結合（間に 0.5 秒の無音）
-        combined = jp_audio + AudioSegment.silent(duration=500) + ko_audio
+        # WAV 読み込み
+        jp_audio = AudioSegment.from_wav(jp_wav)
+        ko_audio = AudioSegment.from_wav(ko_wav)
+
+        # 無音 0.7 秒を確実に挟む
+        silence = AudioSegment.silent(duration=700)
+
+        # 結合（順番固定）
+        combined = jp_audio + silence + ko_audio
 
         # 出力
-        combined.export(out_file, format="mp3")
+        combined.export(out_mp3, format="mp3")
 
         # 再生
-        st.audio(out_file)
+        st.audio(out_mp3)
 
         # 翻訳結果表示
-        st.success("翻訳結果： " + korean_text)
+        st.success("翻訳結果： " + ko_text)
 
         # 一時ファイル削除
-        os.remove(jp_file)
-        os.remove(ko_file)
-        os.remove(out_file)
-
+        for f in [jp_mp3, ko_mp3, jp_wav, ko_wav, out_mp3]:
+            if os.path.exists(f):
+                os.remove(f)
