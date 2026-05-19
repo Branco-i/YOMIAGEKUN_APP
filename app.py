@@ -12,7 +12,7 @@ st.set_page_config(
     layout="centered",
 )
 
-# ====== スタイル ======
+# ====== 韓国アプリ風の簡単なスタイル ======
 CUSTOM_CSS = """
 <style>
     body {
@@ -156,7 +156,7 @@ def get_lang_code(label: str) -> str:
     return "ko"
 
 
-# 🔥 翻訳を1行ずつ安全に行う（リトライ付き）
+# 🔥 翻訳を1行ずつ安全に行う（成功していた頃の方式）
 def safe_translate(text, target_lang, retries=3):
     for _ in range(retries):
         try:
@@ -208,15 +208,14 @@ with st.container():
 
                 target_lang = get_lang_code(target_lang_label)
 
-                # ===== 翻訳（1行ずつ安全に） =====
+                # ===== 翻訳（1行ずつ） =====
                 pairs = []
                 for idx in indices:
                     jp_line = lines[idx]
                     foreign_line = safe_translate(jp_line, target_lang)
 
                     if foreign_line is None:
-                        # 翻訳失敗 → スキップ
-                        continue
+                        continue  # 翻訳失敗 → スキップ
 
                     pairs.append((jp_line, foreign_line))
 
