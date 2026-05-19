@@ -87,14 +87,14 @@ CUSTOM_CSS = """
 st.markdown(CUSTOM_CSS, unsafe_allow_html=True)
 
 # ====== タイトル ======
-st.markdown('<div class="app-title">日中韓よみあげくん</div>', unsafe_allow_html=True)
+st.markdown('<div class="app-title">日中韓タイよみあげくん</div>', unsafe_allow_html=True)
 st.markdown('<div class="app-subtitle">日本語のフレーズから、韓国語・中国語・タイ語の音声教材をつくるよ 🎧</div>', unsafe_allow_html=True)
 
 # ====== 入力カード ======
 with st.container():
     st.markdown('<div class="card">', unsafe_allow_html=True)
     st.markdown('<div class="card-title">① 日本語のフレーズを入力</div>', unsafe_allow_html=True)
-    st.markdown('<div class="small-label">1行につき1フレーズ（例：お姉さんですか？）</div>', unsafe_allow_html=True)
+    st.markdown('<div class="small-label">1行につき1フレーズ（例：おはよう）</div>', unsafe_allow_html=True)
     text = st.text_area("", height=200, placeholder="お姉さんですか？\n無料です\nいつ行きますか？")
     st.markdown('</div>', unsafe_allow_html=True)
 
@@ -348,7 +348,7 @@ st.markdown("""
     margin-top: 2rem;
     padding-bottom: 1rem;
 ">
-💙 <b>Made by MOE</b><br>
-折角なので使ってください ✨
+💙 <b>Made by 3409</b><br>
+折角なので使ってください；；
 </div>
 """, unsafe_allow_html=True)
