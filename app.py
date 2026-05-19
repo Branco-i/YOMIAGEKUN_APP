@@ -156,6 +156,17 @@ def get_lang_code(label: str) -> str:
     return "ko"
 
 
+# 🔥 翻訳を1行ずつ安全に行う（リトライ付き）
+def safe_translate(text, target_lang, retries=3):
+    for _ in range(retries):
+        try:
+            result = translator.translate(text, src="ja", dest=target_lang)
+            return result.text
+        except Exception:
+            continue
+    return None  # 翻訳失敗
+
+
 def change_speed(audio: AudioSegment, speed: float) -> AudioSegment:
     if speed == 1.0:
         return audio
@@ -187,45 +198,33 @@ with st.container():
         if not text.strip():
             st.error("日本語のテキストを入力してください。")
         else:
-            # 行の前処理
             lines = [line.strip() for line in text.split("\n") if line.strip()]
             if not lines:
                 st.error("有効な行がありません。")
             else:
-                # 行の順番（通常 or ランダム）
                 indices = list(range(len(lines)))
                 if mode == "小テストモード（行の順番をランダムに読み上げ）":
                     random.shuffle(indices)
 
                 target_lang = get_lang_code(target_lang_label)
 
-                # ===== 翻訳をまとめて実行（最適化） =====
-                try:
-                    translated_results = translator.translate(lines, src="ja", dest=target_lang)
-                    # googletrans は1件でもリストでも返すので統一
-                    if not isinstance(translated_results, list):
-                        translated_results = [translated_results]
-                except Exception:
+                # ===== 翻訳（1行ずつ安全に） =====
+                pairs = []
+                for idx in indices:
+                    jp_line = lines[idx]
+                    foreign_line = safe_translate(jp_line, target_lang)
+
+                    if foreign_line is None:
+                        # 翻訳失敗 → スキップ
+                        continue
+
+                    pairs.append((jp_line, foreign_line))
+
+                if not pairs:
                     st.error("翻訳に失敗しました。時間をおいて再度お試しください。")
                     st.markdown('</div>', unsafe_allow_html=True)
                     st.stop()
 
-                # 日本語と翻訳のペアを作成
-                pairs = []
-                for idx in indices:
-                    try:
-                        jp_line = lines[idx]
-                        foreign_line = translated_results[idx].text
-                        pairs.append((jp_line, foreign_line))
-                    except Exception:
-                        continue
-
-                if not pairs:
-                    st.error("翻訳結果が取得できませんでした。")
-                    st.markdown('</div>', unsafe_allow_html=True)
-                    st.stop()
-
-                # 無音は一度だけ生成して使い回す
                 silence_between = AudioSegment.silent(duration=silence_between_ms)
                 silence_after_pair = AudioSegment.silent(duration=silence_after_pair_ms)
 
@@ -254,17 +253,14 @@ with st.container():
                                 os.remove(f)
                         continue
 
-                    # 速度調整
                     jp_audio = change_speed(jp_audio, speed)
                     fr_audio = change_speed(fr_audio, speed)
 
-                    # 読み上げ順
                     if order_label == "日本語 → 外国語":
                         pair_audio = jp_audio + silence_between + fr_audio
                     else:
                         pair_audio = fr_audio + silence_between + jp_audio
 
-                    # ペアのあとに無音
                     pair_audio = pair_audio + silence_after_pair
 
                     audio_segments.append(pair_audio)
@@ -275,11 +271,10 @@ with st.container():
                             os.remove(f)
 
                 if not audio_segments:
-                    st.error("音声を生成できた行がありませんでした。翻訳や通信が不安定な可能性があります。")
+                    st.error("音声を生成できた行がありませんでした。")
                     st.markdown('</div>', unsafe_allow_html=True)
                     st.stop()
 
-                # ===== 音声を一括結合（最適化） =====
                 final_audio = audio_segments[0]
                 for seg in audio_segments[1:]:
                     final_audio += seg
@@ -292,10 +287,8 @@ with st.container():
                     st.markdown('</div>', unsafe_allow_html=True)
                     st.stop()
 
-                # 再生
                 st.audio(output_file)
 
-                # ペア一覧表示（学習用）
                 st.markdown('<div class="small-label">読み上げたペア一覧</div>', unsafe_allow_html=True)
                 st.write(f"ペア数：{len(used_pairs)}")
                 for jp_line, foreign_line in used_pairs:
@@ -303,7 +296,6 @@ with st.container():
                     st.markdown(f'<div class="pair-line"><b>{target_lang_label}：</b> {foreign_line}</div>', unsafe_allow_html=True)
                     st.markdown('<div class="pair-separator"></div>', unsafe_allow_html=True)
 
-                # ダウンロードボタン
                 try:
                     with open(output_file, "rb") as f:
                         st.download_button(
