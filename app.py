@@ -87,7 +87,7 @@ CUSTOM_CSS = """
 st.markdown(CUSTOM_CSS, unsafe_allow_html=True)
 
 # ====== タイトル ======
-st.markdown('<div class="app-title">日中韓よみあげくん</div>', unsafe_allow_html=True)
+st.markdown('<div class="app-title">日中韓タイよみあげくん</div>', unsafe_allow_html=True)
 st.markdown('<div class="app-subtitle">日本語のフレーズから、韓国語・中国語・タイ語の音声教材をつくるよ 🎧</div>', unsafe_allow_html=True)
 
 # ====== 入力カード ======
